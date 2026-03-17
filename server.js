@@ -80,10 +80,18 @@ app.post("/tarot/single", async (req, res) => {
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 500
+      max_output_tokens: 700
     });
 
-    const text = extractText(response);
+    console.log("single raw response =", JSON.stringify(response, null, 2));
+
+    const text =
+      response.output_text?.trim() ||
+      response.output?.flatMap(item => item.content || [])
+        ?.map(item => item.text || "")
+        ?.join("\n")
+        ?.trim() ||
+      "";
 
     res.json({
       reading: text || "暫時無法取得解牌內容"
