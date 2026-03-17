@@ -48,7 +48,7 @@ app.post("/tarot/single", async (req, res) => {
     });
 
     res.json({
-      reading: response.output_text
+      reading: response.output_text || JSON.stringify(response)
     });
 
   } catch (error) {
@@ -88,9 +88,9 @@ ${cardsText}
     });
 
     res.json({
-      reading: response.output_text
+      reading: response.output_text || JSON.stringify(response)
     });
-
+    
   } catch (error) {
     console.error("tarot error =", error);
     res.status(500).json({
