@@ -34,11 +34,12 @@ app.post("/tarot/single", async (req, res) => {
 牌：${cardName}
 牌位：${isReversed ? "逆位" : "正位"}
 
-請寫約250字解讀：
-包含
+請提供：
 1. 此刻狀態
 2. 可能發展
 3. 建議
+
+控制在200字內。
 `;
 
     const response = await client.responses.create({
@@ -48,11 +49,10 @@ app.post("/tarot/single", async (req, res) => {
     });
 
     res.json({
-      reading: response.output_text || JSON.stringify(response)
+      reading: response.output_text || "暫時無法取得解牌內容"
     });
-
   } catch (error) {
-    console.error("tarot error =", error);
+    console.error("single tarot error =", error);
     res.status(500).json({
       error: "AI解牌失敗",
       detail: error?.message || "unknown error"
@@ -76,23 +76,25 @@ app.post("/tarot/three", async (req, res) => {
 
 ${cardsText}
 
-請寫約400字解讀：
-包含
-整體狀態、發展方向與建議
+請提供：
+1. 整體狀態
+2. 發展方向
+3. 建議
+
+控制在300字內。
 `;
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 800
+      max_output_tokens: 900
     });
 
     res.json({
-      reading: response.output_text || JSON.stringify(response)
+      reading: response.output_text || "暫時無法取得解牌內容"
     });
-    
   } catch (error) {
-    console.error("tarot error =", error);
+    console.error("three tarot error =", error);
     res.status(500).json({
       error: "AI解牌失敗",
       detail: error?.message || "unknown error"
