@@ -14,12 +14,47 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+// ⭐ 新增：App API Key
+const APP_API_KEY = process.env.APP_API_KEY;
+
 const limiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20
 });
 
 app.use("/tarot", limiter);
+
+// ⭐ 新增：API Key 檢查
+function checkApiKey(req, res, next) {
+  const key = req.headers["x-api-key"];
+
+  if (!key || key !== APP_API_KEY) {
+    return res.status(403).json({
+      error: "API key invalid"
+    });
+  }
+
+  next();
+}
+
+app.use("/tarot", checkApiKey);
+
+function extractText(response) {
+  try {
+    if (response.output_text) {
+      return response.output_text.trim();
+    }
+
+    const text = response.output?.[0]?.content?.[0]?.text;
+    if (text) {
+      return text.trim();
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
 
 app.post("/tarot/single", async (req, res) => {
   try {
@@ -48,9 +83,12 @@ app.post("/tarot/single", async (req, res) => {
       max_output_tokens: 500
     });
 
+    const text = extractText(response);
+
     res.json({
-      reading: response.output_text || "暫時無法取得解牌內容"
+      reading: text || "暫時無法取得解牌內容"
     });
+
   } catch (error) {
     console.error("single tarot error =", error);
     res.status(500).json({
@@ -90,9 +128,12 @@ ${cardsText}
       max_output_tokens: 900
     });
 
+    const text = extractText(response);
+
     res.json({
-      reading: response.output_text || "暫時無法取得解牌內容"
+      reading: text || "暫時無法取得解牌內容"
     });
+
   } catch (error) {
     console.error("three tarot error =", error);
     res.status(500).json({
