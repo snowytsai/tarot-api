@@ -44,7 +44,7 @@ app.post("/tarot/single", async (req, res) => {
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 400
+      max_output_tokens: 500
     });
 
     res.json({
@@ -84,7 +84,7 @@ ${cardsText}
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 400
+      max_output_tokens: 800
     });
 
     res.json({
