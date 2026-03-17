@@ -52,7 +52,11 @@ app.post("/tarot/single", async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ error: "AI解牌失敗" });
+    console.error("tarot error =", error);
+    res.status(500).json({
+      error: "AI解牌失敗",
+      detail: error?.message || "unknown error"
+    });
   }
 });
 
@@ -88,7 +92,11 @@ ${cardsText}
     });
 
   } catch (error) {
-    res.status(500).json({ error: "AI解牌失敗" });
+    console.error("tarot error =", error);
+    res.status(500).json({
+      error: "AI解牌失敗",
+      detail: error?.message || "unknown error"
+    });
   }
 });
 
