@@ -96,9 +96,6 @@ app.post("/tarot/daily", async (req, res) => {
     });
 
     const text = extractText(response);
-
-    console.log("daily text =", text);
-
     // ⭐ 用字串解析（穩定）
     const keywordsMatch = text.match(/本日關鍵詞：(.+)/);
     const shortMatch = text.match(/今日短版指引：(.+)/);
