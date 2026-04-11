@@ -65,14 +65,14 @@ app.post("/tarot/daily", async (req, res) => {
 
     const prompt = `
 你是塔羅每日指引助手。
-請根據以下資訊，輸出「且只能輸出」一個合法 JSON 物件。
-不要加入任何前言、結語、說明、markdown、程式碼區塊、```json。
+請根據以下資訊，輸出且只能輸出一個合法 JSON 物件。
+不要加入任何前言、結語、說明或 markdown 格式。
 
 請嚴格輸出這個格式：
 {
   "keywords": ["關鍵詞1", "關鍵詞2", "關鍵詞3"],
-  "shortSummary": "一句20到40字的今日提醒",
-  "longReading": "180到300字的完整解析"
+  "shortSummary": "一句18到30字的今日提醒",
+  "longReading": "90到140字的完整解析"
 }
 
 規則：
@@ -81,6 +81,8 @@ app.post("/tarot/daily", async (req, res) => {
 - longReading：90到140字
 - 全部使用繁體中文
 - 不要輸出 JSON 以外的任何內容
+- longReading 不要分段
+- longReading 不要超過140字
 
 問題：${question}
 分類：${category}
@@ -91,13 +93,14 @@ app.post("/tarot/daily", async (req, res) => {
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 1200
+      max_output_tokens: 1200,
     });
 
     const text = extractText(response);
 
     console.log("daily raw response =", JSON.stringify(response, null, 2));
     console.log("daily text =", text);
+    console.log("daily text length =", text.length);
 
     let result;
 
@@ -125,8 +128,10 @@ app.post("/tarot/daily", async (req, res) => {
 
     res.json({
       keywords: Array.isArray(result.keywords) ? result.keywords : ["今日指引"],
-      shortSummary: (result.shortSummary || "今天適合放慢腳步，重新整理方向。").toString(),
-      longReading: (result.longReading || "暫時無法取得本日解牌內容").toString()
+      shortSummary:
+        (result.shortSummary || "今天適合放慢腳步，重新整理方向。").toString(),
+      longReading:
+        (result.longReading || "暫時無法取得本日解牌內容").toString()
     });
 
   } catch (error) {
