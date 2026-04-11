@@ -76,9 +76,9 @@ app.post("/tarot/daily", async (req, res) => {
 }
 
 規則：
-- keywords：3到5個繁體中文關鍵詞
-- shortSummary：20到40字
-- longReading：180到300字
+- keywords：3到4個繁體中文關鍵詞
+- shortSummary：18到30字
+- longReading：90到140字
 - 全部使用繁體中文
 - 不要輸出 JSON 以外的任何內容
 
@@ -132,7 +132,7 @@ app.post("/tarot/daily", async (req, res) => {
   } catch (error) {
     console.error("daily tarot error =", error);
     res.status(500).json({
-      error: "AI解牌失敗",
+      error: "解析失敗",
       detail: error?.message || "unknown error"
     });
   }
@@ -185,7 +185,7 @@ app.post("/tarot/single", async (req, res) => {
   } catch (error) {
     console.error("single tarot error =", error);
     res.status(500).json({
-      error: "AI解牌失敗",
+      error: "解析失敗",
       detail: error?.message || "unknown error"
     });
   }
@@ -233,7 +233,7 @@ ${cardsText}
   } catch (error) {
     console.error("three tarot error =", error);
     res.status(500).json({
-      error: "AI解牌失敗",
+      error: "解析失敗",
       detail: error?.message || "unknown error"
     });
   }
