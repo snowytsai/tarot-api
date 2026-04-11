@@ -91,7 +91,7 @@ app.post("/tarot/daily", async (req, res) => {
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 900
+      max_output_tokens: 1200
     });
 
     const text = extractText(response);
