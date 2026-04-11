@@ -64,25 +64,14 @@ app.post("/tarot/daily", async (req, res) => {
     const { question, category, cardName, isReversed } = req.body;
 
     const prompt = `
-你是塔羅每日指引助手。
-請根據以下資訊，輸出且只能輸出一個合法 JSON 物件。
-不要加入任何前言、結語、說明或 markdown 格式。
+你是一位溫和且有洞察力的塔羅解牌者。
+請根據以下資訊，用繁體中文輸出「本日塔羅指引」。
 
-請嚴格輸出這個格式：
-{
-  "keywords": ["關鍵詞1", "關鍵詞2", "關鍵詞3"],
-  "shortSummary": "一句18到30字的今日提醒",
-  "longReading": "90到140字的完整解析"
-}
+請務必嚴格依照下面格式輸出，不要加任何前言、說明或 markdown：
 
-規則：
-- keywords：3到4個繁體中文關鍵詞
-- shortSummary：18到30字
-- longReading：90到140字
-- 全部使用繁體中文
-- 不要輸出 JSON 以外的任何內容
-- longReading 不要分段
-- longReading 不要超過140字
+本日關鍵詞：關鍵詞1｜關鍵詞2｜關鍵詞3
+今日短版指引：一句18到30字的提醒
+完整解析：90到140字的完整解析
 
 問題：${question}
 分類：${category}
@@ -93,45 +82,38 @@ app.post("/tarot/daily", async (req, res) => {
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 1200,
+      max_output_tokens: 900,
     });
 
     const text = extractText(response);
 
-    console.log("daily raw response =", JSON.stringify(response, null, 2));
     console.log("daily text =", text);
-    console.log("daily text length =", text.length);
 
-    let result;
+    // ⭐ 用字串解析（穩定）
+    const keywordsMatch = text.match(/本日關鍵詞：(.+)/);
+    const shortMatch = text.match(/今日短版指引：(.+)/);
+    const longMatch = text.match(/完整解析：([\s\S]+)/);
 
-    try {
-      result = JSON.parse(text);
-    } catch (e) {
-      try {
-        const start = text.indexOf("{");
-        const end = text.lastIndexOf("}");
-        if (start !== -1 && end !== -1 && end > start) {
-          const jsonText = text.substring(start, end + 1);
-          result = JSON.parse(jsonText);
-        } else {
-          throw new Error("No JSON object found");
-        }
-      } catch (innerError) {
-        console.error("daily parse error =", innerError);
-        return res.json({
-          keywords: ["解析失敗"],
-          shortSummary: "請重新嘗試一次",
-          longReading: text || "暫時無法取得本日解牌內容"
-        });
-      }
+    const keywords = keywordsMatch
+      ? keywordsMatch[1].split("｜").map(s => s.trim()).filter(Boolean)
+      : [];
+
+    const shortSummary = shortMatch ? shortMatch[1].trim() : "";
+    const longReading = longMatch ? longMatch[1].trim() : "";
+
+    // ❗ fallback（保護）
+    if (!shortSummary || !longReading) {
+      return res.json({
+        keywords: ["解析失敗"],
+        shortSummary: "請重新嘗試一次",
+        longReading: text || "暫時無法取得本日解牌內容"
+      });
     }
 
     res.json({
-      keywords: Array.isArray(result.keywords) ? result.keywords : ["今日指引"],
-      shortSummary:
-        (result.shortSummary || "今天適合放慢腳步，重新整理方向。").toString(),
-      longReading:
-        (result.longReading || "暫時無法取得本日解牌內容").toString()
+      keywords,
+      shortSummary,
+      longReading
     });
 
   } catch (error) {
