@@ -7,7 +7,6 @@ import OpenAI from "openai";
 dotenv.config();
 
 const app = express();
-app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json());
 
@@ -15,7 +14,7 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// ⭐ App API Key
+// ⭐ 新增：App API Key
 const APP_API_KEY = process.env.APP_API_KEY;
 
 const limiter = rateLimit({
@@ -25,7 +24,7 @@ const limiter = rateLimit({
 
 app.use("/tarot", limiter);
 
-// ⭐ API Key 檢查
+// ⭐ 新增：API Key 檢查
 function checkApiKey(req, res, next) {
   const key = req.headers["x-api-key"];
 
@@ -42,99 +41,21 @@ app.use("/tarot", checkApiKey);
 
 function extractText(response) {
   try {
-    if (response.output_text && response.output_text.trim()) {
+    if (response.output_text) {
       return response.output_text.trim();
     }
 
-    const parts = [];
-
-    if (Array.isArray(response.output)) {
-      for (const item of response.output) {
-        if (Array.isArray(item.content)) {
-          for (const content of item.content) {
-            if (typeof content.text === "string" && content.text.trim()) {
-              parts.push(content.text.trim());
-            }
-          }
-        }
-      }
+    const text = response.output?.[0]?.content?.[0]?.text;
+    if (text) {
+      return text.trim();
     }
 
-    return parts.join("\n").trim();
-  } catch (e) {
-    console.error("extractText error =", e);
+    return "";
+  } catch {
     return "";
   }
 }
-// =========================
-// 本日塔羅 daily
-// =========================
-app.post("/tarot/daily", async (req, res) => {
-  try {
-    const { question, category, cardName, isReversed } = req.body;
 
-    const prompt = `
-你是一位溫和且有洞察力的塔羅解牌者。
-請根據以下資訊，用繁體中文輸出「本日塔羅指引」。
-
-請務必嚴格依照下面格式輸出，不要加任何前言、說明或 markdown：
-
-本日關鍵詞：關鍵詞1｜關鍵詞2｜關鍵詞3
-今日短版指引：一句18到30字的提醒
-完整解析：90到140字的完整解析
-
-問題：${question}
-分類：${category}
-牌名：${cardName}
-牌位：${isReversed ? "逆位" : "正位"}
-`;
-
-    const response = await client.responses.create({
-      model: "gpt-5-mini",
-      input: prompt,
-      max_output_tokens: 900,
-    });
-
-    const text = extractText(response);
-    // ⭐ 用字串解析（穩定）
-    const keywordsMatch = text.match(/本日關鍵詞：(.+)/);
-    const shortMatch = text.match(/今日短版指引：(.+)/);
-    const longMatch = text.match(/完整解析：([\s\S]+)/);
-
-    const keywords = keywordsMatch
-      ? keywordsMatch[1].split("｜").map(s => s.trim()).filter(Boolean)
-      : [];
-
-    const shortSummary = shortMatch ? shortMatch[1].trim() : "";
-    const longReading = longMatch ? longMatch[1].trim() : "";
-
-    // ❗ fallback（保護）
-    if (!shortSummary || !longReading) {
-      return res.json({
-        keywords: ["解析失敗"],
-        shortSummary: "請重新嘗試一次",
-        longReading: text || "暫時無法取得本日解牌內容"
-      });
-    }
-
-    res.json({
-      keywords,
-      shortSummary,
-      longReading
-    });
-
-  } catch (error) {
-    console.error("daily tarot error =", error);
-    res.status(500).json({
-      error: "解析失敗",
-      detail: error?.message || "unknown error"
-    });
-  }
-});
-
-// =========================
-// 單張塔羅 single
-// =========================
 app.post("/tarot/single", async (req, res) => {
   try {
     const { question, category, cardName, isReversed } = req.body;
@@ -179,15 +100,12 @@ app.post("/tarot/single", async (req, res) => {
   } catch (error) {
     console.error("single tarot error =", error);
     res.status(500).json({
-      error: "解析失敗",
+      error: "AI解牌失敗",
       detail: error?.message || "unknown error"
     });
   }
 });
 
-// =========================
-// 三張塔羅 three
-// =========================
 app.post("/tarot/three", async (req, res) => {
   try {
     const { question, category, cards } = req.body;
@@ -227,7 +145,7 @@ ${cardsText}
   } catch (error) {
     console.error("three tarot error =", error);
     res.status(500).json({
-      error: "解析失敗",
+      error: "AI解牌失敗",
       detail: error?.message || "unknown error"
     });
   }
@@ -240,3 +158,4 @@ app.get("/health", (req, res) => {
 app.listen(process.env.PORT || 3000, () => {
   console.log("Tarot API running");
 });
+
