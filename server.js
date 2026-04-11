@@ -64,26 +64,27 @@ app.post("/tarot/daily", async (req, res) => {
     const { question, category, cardName, isReversed } = req.body;
 
     const prompt = `
-你是一位風格溫和、準確且適合社群分享的塔羅解牌者。
-請根據以下牌卡內容，用繁體中文產出「本日塔羅指引」。
+你是塔羅每日指引助手。
+請根據以下資訊，輸出「且只能輸出」一個合法 JSON 物件。
+不要加入任何前言、結語、說明、markdown、程式碼區塊、```json。
 
-請務必只輸出 JSON，不要加任何其他說明、不要加 markdown、不要加 \`\`\`。
-
-JSON 格式如下：
+請嚴格輸出這個格式：
 {
   "keywords": ["關鍵詞1", "關鍵詞2", "關鍵詞3"],
-  "shortSummary": "一句簡短提醒",
-  "longReading": "完整解析"
+  "shortSummary": "一句20到40字的今日提醒",
+  "longReading": "180到300字的完整解析"
 }
 
 規則：
-1. keywords：請提供 3～5 個本日關鍵詞，簡短、有感覺、適合分享圖卡，例如：轉機、停滯、觀察、壓力、突破。
-2. shortSummary：一句 20～40 字的今日提醒，簡短有力。
-3. longReading：180～300 字，包含此刻狀態、今天可能發展、以及建議，語氣自然溫和。
+- keywords：3到5個繁體中文關鍵詞
+- shortSummary：20到40字
+- longReading：180到300字
+- 全部使用繁體中文
+- 不要輸出 JSON 以外的任何內容
 
 問題：${question}
 分類：${category}
-牌：${cardName}
+牌名：${cardName}
 牌位：${isReversed ? "逆位" : "正位"}
 `;
 
@@ -99,21 +100,33 @@ JSON 格式如下：
     console.log("daily text =", text);
 
     let result;
+
     try {
       result = JSON.parse(text);
     } catch (e) {
-      console.error("daily parse error =", e);
-      return res.json({
-        keywords: ["解析失敗"],
-        shortSummary: "請重新嘗試一次",
-        longReading: text || "暫時無法取得本日解牌內容"
-      });
+      try {
+        const start = text.indexOf("{");
+        const end = text.lastIndexOf("}");
+        if (start !== -1 && end !== -1 && end > start) {
+          const jsonText = text.substring(start, end + 1);
+          result = JSON.parse(jsonText);
+        } else {
+          throw new Error("No JSON object found");
+        }
+      } catch (innerError) {
+        console.error("daily parse error =", innerError);
+        return res.json({
+          keywords: ["解析失敗"],
+          shortSummary: "請重新嘗試一次",
+          longReading: text || "暫時無法取得本日解牌內容"
+        });
+      }
     }
 
     res.json({
       keywords: Array.isArray(result.keywords) ? result.keywords : ["今日指引"],
-      shortSummary: result.shortSummary || "今天適合放慢腳步，重新整理方向。",
-      longReading: result.longReading || "暫時無法取得本日解牌內容"
+      shortSummary: (result.shortSummary || "今天適合放慢腳步，重新整理方向。").toString(),
+      longReading: (result.longReading || "暫時無法取得本日解牌內容").toString()
     });
 
   } catch (error) {
