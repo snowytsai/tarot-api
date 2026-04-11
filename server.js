@@ -42,21 +42,30 @@ app.use("/tarot", checkApiKey);
 
 function extractText(response) {
   try {
-    if (response.output_text) {
+    if (response.output_text && response.output_text.trim()) {
       return response.output_text.trim();
     }
 
-    const text = response.output?.[0]?.content?.[0]?.text;
-    if (text) {
-      return text.trim();
+    const parts = [];
+
+    if (Array.isArray(response.output)) {
+      for (const item of response.output) {
+        if (Array.isArray(item.content)) {
+          for (const content of item.content) {
+            if (typeof content.text === "string" && content.text.trim()) {
+              parts.push(content.text.trim());
+            }
+          }
+        }
+      }
     }
 
-    return "";
-  } catch {
+    return parts.join("\n").trim();
+  } catch (e) {
+    console.error("extractText error =", e);
     return "";
   }
 }
-
 // =========================
 // 本日塔羅 daily
 // =========================
