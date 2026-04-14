@@ -85,7 +85,7 @@ app.post("/tarot/single", async (req, res) => {
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 700
+      max_output_tokens: 750
     });
 
     const text = extractText(response);
@@ -128,7 +128,7 @@ ${cardsText}
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 900
+      max_output_tokens: 1000
     });
 
     const text = extractText(response);
@@ -209,7 +209,7 @@ ${dailyHint || ""}
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 900
+      max_output_tokens: 1800
     });
 
     const text = extractText(response);
