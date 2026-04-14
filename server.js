@@ -80,7 +80,7 @@ app.post("/tarot/single", async (req, res) => {
 3. 建議
 
 控制在200字內。
-`;
+`.trim();
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
@@ -93,7 +93,6 @@ app.post("/tarot/single", async (req, res) => {
     res.json({
       reading: text || "暫時無法取得解牌內容"
     });
-
   } catch (error) {
     console.error("single tarot error =", error);
     res.status(500).json({
@@ -124,7 +123,7 @@ ${cardsText}
 3. 建議
 
 控制在300字內。
-`;
+`.trim();
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
@@ -137,7 +136,6 @@ ${cardsText}
     res.json({
       reading: text || "暫時無法取得解牌內容"
     });
-
   } catch (error) {
     console.error("three tarot error =", error);
     res.status(500).json({
@@ -154,7 +152,6 @@ app.post("/tarot/daily-astrology", async (req, res) => {
     res.json({
       astrology: astrologyText || ""
     });
-
   } catch (error) {
     console.error("daily astrology error =", error);
     res.status(500).json({
@@ -163,47 +160,63 @@ app.post("/tarot/daily-astrology", async (req, res) => {
   }
 });
 
-// ⭐ 星象 + 塔羅融合
+// ⭐ 只做長版：星象 + 塔羅完整融合解析
 app.post("/tarot/daily-combined", async (req, res) => {
   try {
-    const { cardName, isReversed, astrologyText } = req.body;
+    const {
+      cardName,
+      isReversed,
+      astrologyText,
+      keywords,
+      dailyHint
+    } = req.body;
 
     const orientation = isReversed ? "逆位" : "正位";
 
     const prompt = `
 你是一位溫和、清楚、自然的塔羅解讀者。
-請將今日星象與塔羅牌結合，寫成一段本日指引。
+請根據以下資料，產出「星象 + 牌卡」融合後的完整建議。
 
 【今日星象】
-${astrologyText}
+${astrologyText || "今日星象資料暫時無法取得"}
 
-【今日塔羅】
+【塔羅牌】
 ${cardName}（${orientation}）
 
-請用繁體中文輸出，內容需包含：
-1. 今日整體氛圍
-2. 結合後的提醒
-3. 行動建議
+【牌卡關鍵字】
+${Array.isArray(keywords) ? keywords.join("、") : ""}
 
-限制：
-- 不要分點
-- 不要標題
-- 語氣自然
-- 控制在120字內
+【今日提醒】
+${dailyHint || ""}
+
+請用繁體中文輸出，內容請自然分成幾段，包含：
+
+1. 今日整體能量
+2. 星象與牌卡的交互影響
+3. 今日最重要的提醒
+4. 實際可行的行動建議
+
+要求：
+- 不要條列數字
+- 不要過度玄學
+- 語氣自然，像真的在對人說話
+- 不要重複貼原始星象資料
+- 不要只是改寫關鍵字
+- 要真的把星象與牌義融合
+- 約 220～320 字
 `.trim();
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
       input: prompt,
-      max_output_tokens: 500
+      max_output_tokens: 900
     });
 
     const text = extractText(response);
 
     res.json({
-      reading: text || "暫時無法取得融合解讀"
+      reading: text || "暫時無法取得完整建議"
     });
-
   } catch (error) {
     console.error("daily combined error =", error);
     res.status(500).json({
