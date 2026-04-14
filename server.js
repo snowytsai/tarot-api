@@ -14,7 +14,7 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// ⭐ 新增：App API Key
+// ⭐ App API Key
 const APP_API_KEY = process.env.APP_API_KEY;
 
 const limiter = rateLimit({
@@ -24,7 +24,7 @@ const limiter = rateLimit({
 
 app.use("/tarot", limiter);
 
-// ⭐ 新增：API Key 檢查
+// ⭐ API Key 檢查
 function checkApiKey(req, res, next) {
   const key = req.headers["x-api-key"];
 
@@ -39,6 +39,7 @@ function checkApiKey(req, res, next) {
 
 app.use("/tarot", checkApiKey);
 
+// ⭐ 統一取文字
 function extractText(response) {
   try {
     if (response.output_text) {
@@ -55,6 +56,10 @@ function extractText(response) {
     return "";
   }
 }
+
+// =========================
+// Tarot routes
+// =========================
 
 app.post("/tarot/single", async (req, res) => {
   try {
@@ -83,15 +88,7 @@ app.post("/tarot/single", async (req, res) => {
       max_output_tokens: 700
     });
 
-    console.log("single raw response =", JSON.stringify(response, null, 2));
-
-    const text =
-      response.output_text?.trim() ||
-      response.output?.flatMap(item => item.content || [])
-        ?.map(item => item.text || "")
-        ?.join("\n")
-        ?.trim() ||
-      "";
+    const text = extractText(response);
 
     res.json({
       reading: text || "暫時無法取得解牌內容"
@@ -100,8 +97,7 @@ app.post("/tarot/single", async (req, res) => {
   } catch (error) {
     console.error("single tarot error =", error);
     res.status(500).json({
-      error: "AI解牌失敗",
-      detail: error?.message || "unknown error"
+      error: "AI解牌失敗"
     });
   }
 });
@@ -145,8 +141,73 @@ ${cardsText}
   } catch (error) {
     console.error("three tarot error =", error);
     res.status(500).json({
-      error: "AI解牌失敗",
-      detail: error?.message || "unknown error"
+      error: "AI解牌失敗"
+    });
+  }
+});
+
+// ⭐ 星象（從 cosmos API 來）
+app.post("/tarot/daily-astrology", async (req, res) => {
+  try {
+    const { astrologyText } = req.body;
+
+    res.json({
+      astrology: astrologyText || ""
+    });
+
+  } catch (error) {
+    console.error("daily astrology error =", error);
+    res.status(500).json({
+      error: "daily astrology failed"
+    });
+  }
+});
+
+// ⭐ 星象 + 塔羅融合
+app.post("/tarot/daily-combined", async (req, res) => {
+  try {
+    const { cardName, isReversed, astrologyText } = req.body;
+
+    const orientation = isReversed ? "逆位" : "正位";
+
+    const prompt = `
+你是一位溫和、清楚、自然的塔羅解讀者。
+請將今日星象與塔羅牌結合，寫成一段本日指引。
+
+【今日星象】
+${astrologyText}
+
+【今日塔羅】
+${cardName}（${orientation}）
+
+請用繁體中文輸出，內容需包含：
+1. 今日整體氛圍
+2. 結合後的提醒
+3. 行動建議
+
+限制：
+- 不要分點
+- 不要標題
+- 語氣自然
+- 控制在120字內
+`.trim();
+
+    const response = await client.responses.create({
+      model: "gpt-5-mini",
+      input: prompt,
+      max_output_tokens: 500
+    });
+
+    const text = extractText(response);
+
+    res.json({
+      reading: text || "暫時無法取得融合解讀"
+    });
+
+  } catch (error) {
+    console.error("daily combined error =", error);
+    res.status(500).json({
+      error: "融合解讀失敗"
     });
   }
 });
@@ -158,4 +219,3 @@ app.get("/health", (req, res) => {
 app.listen(process.env.PORT || 3000, () => {
   console.log("Tarot API running");
 });
-
