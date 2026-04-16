@@ -66,6 +66,21 @@ function normalizeBoolean(value) {
   return false;
 }
 
+// ⭐ 統一建立 GPT input
+function buildUserInput(prompt) {
+  return [
+    {
+      role: "user",
+      content: [
+        {
+          type: "input_text",
+          text: prompt
+        }
+      ]
+    }
+  ];
+}
+
 // =========================
 // Tarot routes
 // =========================
@@ -102,7 +117,7 @@ app.post("/tarot/single", async (req, res) => {
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
-      input: prompt,
+      input: buildUserInput(prompt),
       max_output_tokens: 750
     });
 
@@ -160,7 +175,7 @@ ${cardsText}
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
-      input: prompt,
+      input: buildUserInput(prompt),
       max_output_tokens: 1000
     });
 
@@ -252,7 +267,7 @@ ${dailyHint || ""}
 
     const response = await client.responses.create({
       model: "gpt-5-mini",
-      input: prompt,
+      input: buildUserInput(prompt),
       max_output_tokens: 1800
     });
 
