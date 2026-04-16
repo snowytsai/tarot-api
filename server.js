@@ -42,12 +42,12 @@ app.use("/tarot", checkApiKey);
 // ⭐ 統一取文字
 function extractText(response) {
   try {
-    if (response.output_text) {
+    if (response?.output_text) {
       return response.output_text.trim();
     }
 
-    const text = response.output?.[0]?.content?.[0]?.text;
-    if (text) {
+    const text = response?.output?.[0]?.content?.[0]?.text;
+    if (typeof text === "string" && text.trim()) {
       return text.trim();
     }
 
@@ -57,22 +57,40 @@ function extractText(response) {
   }
 }
 
+// ⭐ 確保布林值
+function normalizeBoolean(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return value.toLowerCase() === "true";
+  }
+  return false;
+}
+
 // =========================
 // Tarot routes
 // =========================
 
 app.post("/tarot/single", async (req, res) => {
   try {
+    console.log("single body =", req.body);
+
     const { question, category, cardName, isReversed } = req.body;
+
+    if (!question || !cardName) {
+      return res.status(400).json({
+        error: "缺少 question 或 cardName",
+        body: req.body
+      });
+    }
 
     const prompt = `
 你是一位溫和理性的塔羅解牌者。
 請用繁體中文解讀以下牌卡。
 
 問題：${question}
-分類：${category}
+分類：${category || "未分類"}
 牌：${cardName}
-牌位：${isReversed ? "逆位" : "正位"}
+牌位：${normalizeBoolean(isReversed) ? "逆位" : "正位"}
 
 請提供：
 1. 此刻狀態
@@ -90,12 +108,12 @@ app.post("/tarot/single", async (req, res) => {
 
     const text = extractText(response);
 
-    res.json({
+    return res.json({
       reading: text || "暫時無法取得解牌內容"
     });
   } catch (error) {
     console.error("single tarot error =", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "AI解牌失敗"
     });
   }
@@ -103,17 +121,32 @@ app.post("/tarot/single", async (req, res) => {
 
 app.post("/tarot/three", async (req, res) => {
   try {
+    console.log("three body =", req.body);
+
     const { question, category, cards } = req.body;
 
-    const cardsText = cards.map(
-      c => `${c.label}：${c.name}（${c.isReversed ? "逆位" : "正位"}）`
-    ).join("\n");
+    if (!question || !Array.isArray(cards) || cards.length === 0) {
+      return res.status(400).json({
+        error: "缺少 question 或 cards",
+        body: req.body
+      });
+    }
+
+    const cardsText = cards
+      .map((c, index) => {
+        const label = c?.label || `第${index + 1}張`;
+        const name = c?.name || c?.cardName || "";
+        const reversed = normalizeBoolean(c?.isReversed) ? "逆位" : "正位";
+        return `${label}：${name}（${reversed}）`;
+      })
+      .join("\n");
 
     const prompt = `
+你是一位溫和理性的塔羅解牌者。
 請用繁體中文解讀以下三張塔羅牌。
 
 問題：${question}
-分類：${category}
+分類：${category || "未分類"}
 
 ${cardsText}
 
@@ -133,12 +166,12 @@ ${cardsText}
 
     const text = extractText(response);
 
-    res.json({
+    return res.json({
       reading: text || "暫時無法取得解牌內容"
     });
   } catch (error) {
     console.error("three tarot error =", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "AI解牌失敗"
     });
   }
@@ -147,22 +180,26 @@ ${cardsText}
 // ⭐ 星象（從 cosmos API 來）
 app.post("/tarot/daily-astrology", async (req, res) => {
   try {
+    console.log("daily astrology body =", req.body);
+
     const { astrologyText } = req.body;
 
-    res.json({
+    return res.json({
       astrology: astrologyText || ""
     });
   } catch (error) {
     console.error("daily astrology error =", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "daily astrology failed"
     });
   }
 });
 
-// ⭐ 只做長版：星象 + 塔羅完整融合解析
+// ⭐ 星象 + 塔羅完整融合解析
 app.post("/tarot/daily-combined", async (req, res) => {
   try {
+    console.log("daily combined body =", req.body);
+
     const {
       cardName,
       isReversed,
@@ -171,7 +208,14 @@ app.post("/tarot/daily-combined", async (req, res) => {
       dailyHint
     } = req.body;
 
-    const orientation = isReversed ? "逆位" : "正位";
+    if (!cardName) {
+      return res.status(400).json({
+        error: "缺少 cardName",
+        body: req.body
+      });
+    }
+
+    const orientation = normalizeBoolean(isReversed) ? "逆位" : "正位";
 
     const prompt = `
 你是一位溫和、清楚、自然的塔羅解讀者。
@@ -214,12 +258,12 @@ ${dailyHint || ""}
 
     const text = extractText(response);
 
-    res.json({
+    return res.json({
       reading: text || "暫時無法取得完整建議"
     });
   } catch (error) {
     console.error("daily combined error =", error);
-    res.status(500).json({
+    return res.status(500).json({
       error: "融合解讀失敗"
     });
   }
